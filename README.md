@@ -1,4 +1,16 @@
 # RecoveryAI-Simulation-Engine
+## Decision learning foundation
+
+The [12-workstream program](docs/decision_engine_program.md) separates implemented
+offline foundations from real-data/model/production gates. The new
+[research data contract](docs/learning_data_contract.md) prepares permissioned,
+time-correct first-decision datasets; it does not train or authorize a model.
+
+```bash
+python tools/create_learning_example.py outputs/learning-example
+python -m recoveryai_sim prepare-learning --input outputs/learning-example/episodes.jsonl --permission outputs/learning-example/permission.json --split outputs/learning-example/split.json --output outputs/learning-foundation
+```
+
 ## Subscription lifecycle: v0.4
 
 Schema2 now supports explicit synthetic pause, resume, cancellation and future

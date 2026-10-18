@@ -1,6 +1,6 @@
 # Permissioned real-data boundary
 
-The current adapter accepts **aggregates only**, not real event streams. The
+The calibration adapter accepts **aggregates only**, not real event streams. The
 `assess-calibration` CLI validates explicit permission, pseudonymous tenant
 reference, population, UTC period, source version, integer counts and an exact
 initial-failure denominator. Unknown fields (including PII) are rejected. Its
@@ -21,6 +21,10 @@ Before real merchant integration:
 6. Run invariants, grouped temporal model validation and shadow evaluation. Only
    a separately approved real experiment can establish causal lift.
 
-Planned, not implemented: raw merchant adapter, hierarchical Bayesian fitting,
+The separate [offline first-decision contract](learning_data_contract.md) now
+validates operator-attested episode exports and guarded evaluation partitions.
+It is not an authenticated Alroca export or a calibration fitter.
+
+Planned, not implemented: authenticated merchant adapter, hierarchical Bayesian fitting,
 drift monitoring, retraining scheduler, real-data model registry and serving.
 Do not pretend those capabilities exist because this contract is documented.

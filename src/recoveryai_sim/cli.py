@@ -33,6 +33,11 @@ def main(argv=None):
     compare.add_argument("--scenarios",choices=SCENARIOS,nargs="+")
     calibrate = commands.add_parser("assess-calibration")
     calibrate.add_argument("--input", type=Path, required=True)
+    learning = commands.add_parser("prepare-learning")
+    learning.add_argument("--input", type=Path, required=True)
+    learning.add_argument("--permission", type=Path, required=True)
+    learning.add_argument("--split", type=Path, required=True)
+    learning.add_argument("--output", type=Path, required=True)
     args = parser.parse_args(argv)
     if args.command == "generate":
         cfg = asdict(Config.load(args.config)) if args.config else {}
@@ -61,6 +66,9 @@ def main(argv=None):
         cfg=Config.load(args.config)
         overrides={k:getattr(args,k) for k in ("invoices","merchants") if getattr(args,k) is not None}
         result=compare_policies(replace(cfg,**overrides),args.output,seeds=args.seeds,scenarios=args.scenarios)
+    elif args.command == "prepare-learning":
+        from .learning_dataset import prepare_learning
+        result = prepare_learning(args.input,args.permission,args.split,args.output)
     else:
         from .calibration import assess_aggregate
         result = assess_aggregate(json.loads(args.input.read_text(encoding="utf-8")))

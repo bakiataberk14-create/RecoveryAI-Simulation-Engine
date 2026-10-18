@@ -19,6 +19,8 @@ jobs:
       - run: python -m pytest -q -o junit_family=xunit2 --junitxml=reports/junit.xml
       - run: python tools/check_junit.py reports/junit.xml
       - run: python -m compileall -q src
+      - run: python tools/create_learning_example.py outputs/learning-example
+      - run: python -m recoveryai_sim prepare-learning --input outputs/learning-example/episodes.jsonl --permission outputs/learning-example/permission.json --split outputs/learning-example/split.json --output outputs/learning-foundation
       - run: python -m recoveryai_sim generate --invoices 10000 --merchants 30 --output outputs/ci --parquet
       - run: python -m recoveryai_sim validate --input outputs/ci
       - run: python -m recoveryai_sim evaluate --input outputs/ci
@@ -37,6 +39,7 @@ jobs:
           name: simulation-reports-${{ matrix.python-version }}
           path: |
             reports/junit.xml
+            outputs/learning-foundation/prepare_learning_report.json
             outputs/ci/*report.json
             outputs/ci/manifest.json
             outputs/sequential/*report.json

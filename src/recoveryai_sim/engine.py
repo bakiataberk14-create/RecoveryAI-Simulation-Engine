@@ -76,7 +76,7 @@ def generate(config: Config, output: Path, parquet=False):
                     "engine_version": __version__, "config": asdict(config), "config_sha256": config.digest,
                     "rule_version": RULE_VERSION, "counts": counts, "status": "complete",
                     "source_sha256": IMPORTED_SOURCE_DIGEST, "logical_checksums": checksums,
-                    "source_registry_version": "2026-10-18.4",
+                    "source_registry_version": "2026-10-18.5",
                     "lifecycle_contract": "exogenous-calendar-v1" if config.schema_version=="2" else None,
                     "initial_world_sha256": world.initial_world_sha256,
                     "causal_episode_contract": "failure-anchored-30d-v1" if config.schema_version=="2" else None,
