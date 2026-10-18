@@ -37,6 +37,12 @@ def load_training(root):
     with (root / "training" / "decisions.jsonl").open(encoding="utf-8") as source:
         for line in source:
             record = json.loads(line)
-            if record.get("synthetic") is not True or set(record["x"]) != MODEL_FEATURES:
+            expected=MODEL_FEATURES
+            if record.get("schema_version")=="2":
+                from .sequential_views import SEQUENCE_FEATURES
+                expected=SEQUENCE_FEATURES-{"available_at"}
+            elif record.get("schema_version","1")!="1":
+                raise ValueError("Unsupported training schema")
+            if record.get("synthetic") is not True or set(record["x"]) != expected:
                 raise ValueError("Not an approved synthetic training view")
             yield record

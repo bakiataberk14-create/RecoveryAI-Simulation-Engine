@@ -1,6 +1,6 @@
 {
-  "registry_version": "2026-10-18.1",
-  "simulator_version": "0.1.0",
+  "registry_version": "2026-10-18.2",
+  "simulator_version": "0.2.0",
   "owner": "RecoveryAI maintainers",
   "entries": [
     {
@@ -48,6 +48,15 @@
       "parameter_reference": "recoveryai_sim.parameters.Parameters and recoveryai_sim.config.Config",
       "uncertainty": "not empirically calibrated",
       "limitation": "All probabilities, effect sizes, monetary costs, country weights and behavioral distributions are hypothetical."
+    },
+    {
+      "id": "sequential_window_model",
+      "evidence_class": "EXPERIMENTAL_HYPOTHESIS",
+      "source_url": null,
+      "population": "fictional sequential recovery episodes",
+      "parameter_reference": "docs/sequential_v2.md and configs/sequential.json",
+      "value_or_rule": "Conditional window probability 1-(1-q)^(days/30), bounded steps/retries and one episode reward.",
+      "limitation": "Uncalibrated local transition model; next-window oracle is not full-policy counterfactual value."
     },
     {
       "id": "scenario_shifts",

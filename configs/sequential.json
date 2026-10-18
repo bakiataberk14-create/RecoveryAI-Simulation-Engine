@@ -1,0 +1,11 @@
+{
+  "schema_version": "2",
+  "invoices": 10000,
+  "merchants": 30,
+  "seed": 42,
+  "policy": "rule_based",
+  "max_steps": 4,
+  "max_retries": 2,
+  "step_interval_days": 3,
+  "recovery_window_days": 30
+}

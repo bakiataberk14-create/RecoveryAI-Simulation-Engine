@@ -35,14 +35,22 @@ def generate(config: Config, output: Path, parquet=False):
         import pyarrow  # fail before creating output if optional dependency is absent
     output = Path(output)
     output.mkdir(parents=True, exist_ok=False)
-    store = Store(output / "simulation.sqlite")
-    world = World(config, store)
+    store = Store(output / "simulation.sqlite", config.schema_version)
+    if config.schema_version == "2":
+        from .sequential import SequentialWorld
+        world = SequentialWorld(config, store)
+    else:
+        world = World(config, store)
     try:
         world.run()
         store.db.commit()
-        counts = export_tables(store.db, output, parquet)
-        from .views import export_training
-        export_training(store.db, output)
+        counts = export_tables(store.db, output, parquet, store.schema)
+        if config.schema_version == "2":
+            from .sequential_views import export_training_v2
+            export_training_v2(store.db, output)
+        else:
+            from .views import export_training
+            export_training(store.db, output)
         checksums = {}
         for path in sorted(output.rglob("*.jsonl")):
             with path.open("rb") as content:
@@ -55,7 +63,7 @@ def generate(config: Config, output: Path, parquet=False):
                     "engine_version": __version__, "config": asdict(config), "config_sha256": config.digest,
                     "rule_version": RULE_VERSION, "counts": counts, "status": "complete",
                     "source_sha256": source_hash.hexdigest(), "logical_checksums": checksums,
-                    "source_registry_version": "2026-10-18.1",
+                    "source_registry_version": "2026-10-18.2",
                     "oracle_warning": "oracle/ and simulation.sqlite contain hidden truth; NEVER train directly from them"}
         (output / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
     finally:

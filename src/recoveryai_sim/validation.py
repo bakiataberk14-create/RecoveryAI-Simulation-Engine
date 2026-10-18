@@ -11,6 +11,9 @@ from .replay import ReplayLedger
 
 def validate(root: Path):
     manifest = json.loads((root / "manifest.json").read_text(encoding="utf-8"))
+    if manifest["config"]["schema_version"]=="2":
+        from .sequential_validation import validate_v2
+        return validate_v2(root,manifest)
     db = sqlite3.connect(f"{(root / 'simulation.sqlite').as_uri()}?mode=ro", uri=True)
     db.row_factory = sqlite3.Row
     failures, checks = [], {}

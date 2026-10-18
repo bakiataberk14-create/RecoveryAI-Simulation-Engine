@@ -18,7 +18,7 @@ SCHEMA = {
     "oracle": "id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, action_id TEXT NOT NULL REFERENCES actions(id), action TEXT NOT NULL, recovery_day INTEGER, retained_90d INTEGER NOT NULL, refund_day INTEGER, reward_minor INTEGER NOT NULL, latent_reliability REAL NOT NULL, UNIQUE(action_id,action)",
     "oracle_world": "id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, merchant_effect REAL NOT NULL, reliability REAL NOT NULL, willingness REAL NOT NULL",
 }
-ORACLE_TABLES = {"oracle", "oracle_world"}
+ORACLE_TABLES = {"oracle", "oracle_world", "step_oracle"}
 
 
 def encode(value):
@@ -26,13 +26,17 @@ def encode(value):
 
 
 class Store:
-    def __init__(self, path: Path):
+    def __init__(self, path: Path, schema_version="1"):
         if path.exists():
             raise FileExistsError(f"Refusing to overwrite {path}")
         self.db = sqlite3.connect(path)
         self.db.row_factory = sqlite3.Row
         self.db.execute("PRAGMA foreign_keys=ON")
-        for table, ddl in SCHEMA.items():
+        self.schema = SCHEMA
+        if schema_version == "2":
+            from .sequential_schema import SCHEMA_V2
+            self.schema = SCHEMA_V2
+        for table, ddl in self.schema.items():
             self.db.execute(f"CREATE TABLE {table} ({ddl})")
         self.db.execute("CREATE INDEX events_invoice ON events(invoice_id)")
         self.db.execute("CREATE INDEX deliveries_event ON deliveries(event_id)")
@@ -43,25 +47,36 @@ class Store:
         for table in ("events", "oracle", "oracle_world"):
             for operation in ("UPDATE", "DELETE"):
                 self.db.execute(f"CREATE TRIGGER immutable_{table}_{operation} BEFORE {operation} ON {table} BEGIN SELECT RAISE(ABORT,'append-only evidence'); END")
+        if schema_version == "2":
+            from .state_machine import install_triggers
+            install_triggers(self.db)
+            self.db.execute("CREATE INDEX observations_invoice ON observations(invoice_id,available_at)")
+            self.db.execute("CREATE INDEX subscriptions_customer ON subscriptions(customer_id)")
+            self.db.execute("CREATE INDEX invoices_subscription ON invoices(subscription_id)")
+            self.db.execute("""CREATE TRIGGER immutable_sequence BEFORE UPDATE OF tenant_id,invoice_id,customer_id,step,previous_action_id,
+                source_observation_id,sources_json ON actions BEGIN SELECT RAISE(ABORT,'immutable sequence'); END""")
+            for table in ("observations", "action_results", "step_oracle"):
+                for operation in ("UPDATE", "DELETE"):
+                    self.db.execute(f"CREATE TRIGGER immutable_{table}_{operation} BEFORE {operation} ON {table} BEGIN SELECT RAISE(ABORT,'append-only evidence'); END")
 
     def insert(self, table, **values):
-        if table not in SCHEMA:
+        if table not in self.schema:
             raise ValueError("Unknown table")
         columns = ",".join(values)
         self.db.execute(f"INSERT INTO {table} ({columns}) VALUES ({','.join('?' for _ in values)})", tuple(values.values()))
 
     def update(self, table, record_id, **values):
-        if table not in SCHEMA:
+        if table not in self.schema:
             raise ValueError("Unknown table")
         self.db.execute(f"UPDATE {table} SET {','.join(k+'=?' for k in values)} WHERE id=?", (*values.values(), record_id))
 
 
-def export_tables(db, root: Path, parquet=False):
+def export_tables(db, root: Path, parquet=False, schema=None):
     if parquet:
         import pyarrow as pa
         import pyarrow.parquet as pq
     counts = {}
-    for table in SCHEMA:
+    for table in (schema or SCHEMA):
         folder = root / ("oracle" if table in ORACLE_TABLES else "operational")
         folder.mkdir(parents=True, exist_ok=True)
         cursor = db.execute(f"SELECT * FROM {table} ORDER BY id")

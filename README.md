@@ -1,4 +1,20 @@
 # RecoveryAI-Simulation-Engine
+## Sequential engine: v0.2
+
+Schema2 adds delayed observations, database-enforced state transitions and bounded
+multi-step recovery. Read [the v2 contract and limitations](docs/sequential_v2.md).
+Schema1 remains available for the existing one-decision experiments.
+
+```bash
+python -m recoveryai_sim generate --config configs/sequential.json --output outputs/sequence --parquet
+python -m recoveryai_sim validate --input outputs/sequence
+python -m recoveryai_sim train --input outputs/sequence
+```
+
+Decision evidence is timestamped and immutable. Dispatch rechecks payment,
+subscription, method and consent state. Episode financial rewards appear once;
+one-step policy estimators explicitly reject sequential datasets.
+
 ## Runnable implementation: v0.1
 
 The repository now contains an offline vertical slice. The original blueprint

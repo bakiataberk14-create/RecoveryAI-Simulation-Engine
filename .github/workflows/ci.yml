@@ -24,6 +24,9 @@ jobs:
       - run: python -m recoveryai_sim evaluate --input outputs/ci
       - run: python -m recoveryai_sim oracle-evaluate --input outputs/ci
       - run: python -m recoveryai_sim train --input outputs/ci
+      - run: python -m recoveryai_sim generate --config configs/sequential.json --output outputs/sequential --parquet
+      - run: python -m recoveryai_sim validate --input outputs/sequential
+      - run: python -m recoveryai_sim train --input outputs/sequential
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -32,3 +35,5 @@ jobs:
             reports/junit.xml
             outputs/ci/*report.json
             outputs/ci/manifest.json
+            outputs/sequential/*report.json
+            outputs/sequential/manifest.json

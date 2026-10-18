@@ -4,9 +4,19 @@ import random
 from statistics import mean
 from .safety import select_action
 from .views import load_training
+import json
+
+
+def sequential_estimator_block(root):
+    manifest=json.loads((root/"manifest.json").read_text(encoding="utf-8"))
+    if manifest["config"]["schema_version"]=="2":
+        return {"status":"blocked","synthetic_only":True,"reason":"Sequential trajectories require sequential policy evaluation; one-step IPS/oracle values are not identified by this estimator."}
 
 
 def evaluate(root, target_policy="rule_based", seed=42, bootstrap=200):
+    blocked=sequential_estimator_block(root)
+    if blocked:
+        return blocked
     groups = defaultdict(list)
     for row in load_training(root):
         if row["reward_30d_minor"] is not None:
@@ -92,6 +102,9 @@ def train_baselines(root):
 
 def evaluate_oracle(root, seed=42, bootstrap=200):
     """Explicit oracle-only path. Paired current-context value, not training input."""
+    blocked=sequential_estimator_block(root)
+    if blocked:
+        return blocked
     import sqlite3
     import json
     db = sqlite3.connect(f"{(root.resolve() / 'simulation.sqlite').as_uri()}?mode=ro", uri=True)

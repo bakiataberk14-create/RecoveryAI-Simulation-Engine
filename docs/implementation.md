@@ -1,5 +1,9 @@
 # Implementation guide (actual v0.1 commands)
 
+Engine0.2 also supports the opt-in [schema2 sequential contract](sequential_v2.md).
+Use `--config configs/sequential.json` for delayed observations and multiple steps.
+The one-step evaluate/oracle-evaluate commands intentionally reject schema2.
+
 Use Python 3.11+ and an isolated virtual environment. The core needs only the
 standard library. `pip install -r requirements-dev.lock` reproduces the tested
 Parquet/ML/test toolchain; then `pip install -e .`. Alternatively use the extras
