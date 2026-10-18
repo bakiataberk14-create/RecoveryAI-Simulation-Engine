@@ -76,7 +76,8 @@ def generate(config: Config, output: Path, parquet=False):
                     "engine_version": __version__, "config": asdict(config), "config_sha256": config.digest,
                     "rule_version": RULE_VERSION, "counts": counts, "status": "complete",
                     "source_sha256": IMPORTED_SOURCE_DIGEST, "logical_checksums": checksums,
-                    "source_registry_version": "2026-10-18.3",
+                    "source_registry_version": "2026-10-18.4",
+                    "lifecycle_contract": "exogenous-calendar-v1" if config.schema_version=="2" else None,
                     "initial_world_sha256": world.initial_world_sha256,
                     "causal_episode_contract": "failure-anchored-30d-v1" if config.schema_version=="2" else None,
                     "oracle_warning": "oracle/ and simulation.sqlite contain hidden truth; NEVER train directly from them"}
@@ -174,7 +175,11 @@ class World:
             initial_hash.update(table.encode())
             for row in self.store.db.execute(f"SELECT * FROM {table} ORDER BY id"):
                 initial_hash.update((encode(dict(row))+"\n").encode())
-        for _,_,_,(customer,_) in sorted(self.queue):
+        initial_hash.update(encode([asdict(event) for event in self.config.lifecycle_events]).encode())
+        for _,_,kind,payload in sorted(self.queue):
+            if kind != "invoice":
+                continue
+            customer,_ = payload
             initial_hash.update(encode({"customer":customer["id"],"renewals":[stamp(date) for date in customer["dates"]]}).encode())
         self.initial_world_sha256=initial_hash.hexdigest()
         while self.queue:

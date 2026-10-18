@@ -1,0 +1,15 @@
+{
+  "schema_version": "2",
+  "invoices": 1000,
+  "merchants": 10,
+  "months": 12,
+  "seed": 42,
+  "policy": "rule_based",
+  "max_retries": 2,
+  "lifecycle_events": [
+    {"customer_index": 0, "day": 20, "kind": "pause"},
+    {"customer_index": 0, "day": 75, "kind": "resume"},
+    {"customer_index": 0, "day": 100, "kind": "plan", "amount_minor": 2500, "interval_months": 3},
+    {"customer_index": 1, "day": 150, "kind": "cancel"}
+  ]
+}

@@ -82,7 +82,8 @@ def compare_policies(config,output:Path,seeds=(42,43),scenarios=None,policies=("
         "baseline":"observe","seeds":list(seeds),"policies":list(policies),"scenarios":{},"runs":[],
         "limitations":["Conditional simulator evidence, not real merchant lift.",
                        "Confidence intervals resample merchants within the fixed generated worlds.",
-                       "Initial-payment failure mechanism and fixed enrollment are held constant across policies."]}
+                       "Initial-payment failure mechanism and fixed enrollment are held constant across policies.",
+                       "Lifecycle controls are exogenous and identical across policies; no policy-induced churn or LTV effect is estimated."]}
     reference_source=None
     for scenario in scenarios:
         contrasts={policy:[] for policy in policies}

@@ -1,4 +1,17 @@
 # RecoveryAI-Simulation-Engine
+## Subscription lifecycle: v0.4
+
+Schema2 now supports explicit synthetic pause, resume, cancellation and future
+price/interval changes. Immutable renewal slots explain issued and skipped invoices.
+Read [the lifecycle contract](docs/subscription_lifecycle_v4.md) before interpreting
+the invoice budget or retention labels.
+
+```bash
+python -m recoveryai_sim generate --config configs/lifecycle.json --output outputs/lifecycle --parquet
+python -m recoveryai_sim validate --input outputs/lifecycle
+python -m recoveryai_sim compare-policies --config configs/lifecycle.json --seeds 42 --output outputs/lifecycle-comparison
+```
+
 ## Full policy comparisons: v0.3
 
 Compare complete multi-step policies on matched worlds and fixed initial-failure

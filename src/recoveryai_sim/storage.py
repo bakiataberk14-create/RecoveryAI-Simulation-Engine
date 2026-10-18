@@ -53,9 +53,12 @@ class Store:
             self.db.execute("CREATE INDEX observations_invoice ON observations(invoice_id,available_at)")
             self.db.execute("CREATE INDEX subscriptions_customer ON subscriptions(customer_id)")
             self.db.execute("CREATE INDEX invoices_subscription ON invoices(subscription_id)")
+            self.db.execute("""CREATE TRIGGER immutable_invoice_terms BEFORE UPDATE OF
+                tenant_id,subscription_id,currency,amount_due,created_at ON invoices
+                BEGIN SELECT RAISE(ABORT,'immutable invoice terms'); END""")
             self.db.execute("""CREATE TRIGGER immutable_sequence BEFORE UPDATE OF tenant_id,invoice_id,customer_id,step,previous_action_id,
                 source_observation_id,sources_json ON actions BEGIN SELECT RAISE(ABORT,'immutable sequence'); END""")
-            for table in ("observations", "action_results", "step_oracle"):
+            for table in ("observations", "action_results", "step_oracle", "subscription_events", "renewal_slots"):
                 for operation in ("UPDATE", "DELETE"):
                     self.db.execute(f"CREATE TRIGGER immutable_{table}_{operation} BEFORE {operation} ON {table} BEGIN SELECT RAISE(ABORT,'append-only evidence'); END")
 

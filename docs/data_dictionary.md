@@ -56,3 +56,12 @@ not failure. Policies see only observed features; counterfactuals are oracle-onl
 - ML target is observed recovery under the logging policy, not individual causal
   uplift. Training merchants and future test merchants are disjoint; training
   observation windows must end before the split cutoff.
+
+## Subscription lifecycle extension (v0.4, schema2)
+
+`subscription_events` records immutable exogenous merchant controls: id,
+tenant_id, subscription_id, occurred_at, kind, before_json and after_json.
+`renewal_slots` records immutable calendar slots: id, tenant_id, subscription_id,
+scheduled_at, cycle, status, amount_minor, currency, interval_months and optional
+invoice_id. Status is issued/paused/cancelled/unpaid. Only issued slots reference
+an invoice. Neither table is a provider-confirmed outcome or a training feature.

@@ -28,7 +28,13 @@ def validate_v2(root,manifest):
             OR refund_amount<0 OR refund_amount>amount_paid OR (status IN ('paid','refunded') AND amount_remaining<>0)"""))
         check("episode_accounting",count("SELECT count(*) FROM outcomes WHERE net_revenue<>gross_recovered-processing_cost-communication_cost-refund_amount"))
         check("single_collection",count("SELECT count(*) FROM (SELECT invoice_id FROM attempts WHERE result='succeeded' GROUP BY invoice_id HAVING count(*)>1)"))
-        relations=[("customers","merchant_id","merchants"),("subscriptions","customer_id","customers"),
+        check("renewal_invoice_snapshot",count("""SELECT count(*) FROM renewal_slots r JOIN invoices i ON i.id=r.invoice_id
+            WHERE r.tenant_id<>i.tenant_id OR r.subscription_id<>i.subscription_id OR r.amount_minor<>i.amount_due
+            OR r.currency<>i.currency OR r.scheduled_at<>i.created_at"""))
+        check("renewal_coverage",count("SELECT count(*) FROM invoices i WHERE NOT EXISTS (SELECT 1 FROM renewal_slots r WHERE r.invoice_id=i.id)"))
+        check("renewal_budget",int(count("SELECT count(*) FROM renewal_slots")>manifest["config"]["invoices"]))
+        relations=[("subscription_events","subscription_id","subscriptions"),("renewal_slots","subscription_id","subscriptions"),
+            ("customers","merchant_id","merchants"),("subscriptions","customer_id","customers"),
             ("payment_methods","customer_id","customers"),("invoices","subscription_id","subscriptions"),
             ("actions","invoice_id","invoices"),("actions","customer_id","customers"),
             ("actions","previous_action_id","actions"),("actions","source_observation_id","observations"),

@@ -5,6 +5,7 @@ import json
 import math
 from pathlib import Path
 from .parameters import Parameters
+from .lifecycle import LifecycleEvent
 
 
 # Values are deliberately hypothetical. Separate parameters permit sensitivity tests.
@@ -41,9 +42,33 @@ class Config:
     recovery_window_days: int = 30
     start: str = "2024-01-01T00:00:00+00:00"
     schema_version: str = "1"
+    lifecycle_events: tuple[LifecycleEvent, ...] = ()
     parameters: Parameters = field(default_factory=Parameters)
 
     def __post_init__(self):
+        if not isinstance(self.lifecycle_events, (list, tuple)):
+            raise ValueError("lifecycle_events must be a sequence")
+        events = tuple(LifecycleEvent(**e) if isinstance(e, dict) else e for e in self.lifecycle_events)
+        if any(not isinstance(e, LifecycleEvent) for e in events):
+            raise ValueError("Invalid lifecycle event")
+        if events and self.schema_version != "2":
+            raise ValueError("Lifecycle controls require schema 2")
+        from .state_machine import require_transition
+        states, seen = {}, set()
+        for event in sorted(events, key=lambda e: (e.customer_index, e.day)):
+            key = (event.customer_index, event.day)
+            if key in seen:
+                raise ValueError("Only one lifecycle event per customer/day")
+            seen.add(key)
+            status = states.get(event.customer_index, "active")
+            if event.kind == "plan":
+                if status == "cancelled":
+                    raise ValueError("Plan change after cancellation")
+            else:
+                target = {"pause": "paused", "resume": "active", "cancel": "cancelled"}[event.kind]
+                require_transition("subscriptions", status, target)
+                states[event.customer_index] = target
+        object.__setattr__(self, "lifecycle_events", events)
         if isinstance(self.parameters, dict):
             object.__setattr__(self, "parameters", Parameters(**self.parameters))
         if not isinstance(self.parameters, Parameters):

@@ -99,6 +99,7 @@ def evaluate_trajectories(root,target_policy="rule_based",bootstrap=200,min_ess=
         "assumptions":["Known randomized conditional behavior propensities and unchanged target policy version.",
                        "No interference between customers; shared exogenous merchant/world conditions are held fixed.",
                        "Fixed initial-failure enrollment and administrative maturity, independent of policy choice.",
+                       "Configured lifecycle events are exogenous; policy-induced churn and long-term LTV are outside this estimand.",
                        "No unresolved outcomes are dropped. Large weights are not clipped or normalized to hide variance."]}
     for currency,counts in sorted(maturity.items()):
         if counts["unresolved"] or counts["unobserved_provider"]:

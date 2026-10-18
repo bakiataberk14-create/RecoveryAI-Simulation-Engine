@@ -12,21 +12,16 @@ from .config import SCENARIOS
 from .safety import CATEGORY, Context, HARD, RULE_VERSION, eligible_actions
 from .sequence_policy import choose, POLICY_VERSION
 from .storage import encode
+from .lifecycle import LifecycleMixin
 
 CONTACT = {"email", "request_update", "request_authentication"}
 TERMINAL = {"paid", "refunded", "voided", "written_off"}
 
 
-class SequentialWorld(World):
+class SequentialWorld(LifecycleMixin, World):
     def __init__(self, config, store):
         super().__init__(config, store)
         self.episodes, self.event_numbers, self.timers = {}, {}, set()
-
-    def on_invoice(self,time,payload):
-        customer,_=payload
-        status=self.store.db.execute("SELECT status FROM subscriptions WHERE id=?",(customer["sub"],)).fetchone()[0]
-        if status=="active":
-            super().on_invoice(time,payload)
 
     def on_control(self,time,payload):
         """Explicit synthetic merchant controls; their notifications can arrive late."""
@@ -205,7 +200,7 @@ class SequentialWorld(World):
         sources += [dict(id=r["id"],available_at=r["recorded_at"],kind="execution") for r in self.store.db.execute(
             "SELECT r.id,r.recorded_at FROM action_results r JOIN actions a ON a.id=r.action_id WHERE a.invoice_id=? AND a.tenant_id=? AND r.recorded_at<=? ORDER BY r.recorded_at,r.id",
             (invoice["id"],c["tenant"],stamp(time)))]
-        features = dict(amount_minor=c["amount"],currency=c["currency"],decline_reason=s["decline"],
+        features = dict(amount_minor=invoice["amount"],currency=c["currency"],decline_reason=s["decline"],
             decline_category=CATEGORY.get(s["decline"],"unknown"),attempt_count=s["attempt_count"],
             subscription_age_days=(time-c["signup"]).days,past_successes=history.get("sim.payment_succeeded",0),
             past_failures=history.get("sim.payment_failed",0),engagement=c["engagement"],consent=s["consent"],
@@ -387,6 +382,11 @@ class SequentialWorld(World):
         gross=invoice["amount"] if paid_at and paid_at<=start+timedelta(days=30) else 0
         refund=invoice["amount"] if s["refund_at"] and s["refund_at"]<=end30 else 0
         retention=self.noise.uniform(invoice["id"],"retention") < max(0,min(1,self.parameters.retention_base+self.parameters.retention_engagement_weight*c["engagement"]-SCENARIOS[self.config.scenario][2]))
+        lifecycle = self.store.db.execute("""SELECT after_json FROM subscription_events
+            WHERE subscription_id=? AND occurred_at<=? ORDER BY occurred_at DESC,id DESC LIMIT 1""",
+            (c["sub"],stamp(start+timedelta(days=90)))).fetchone()
+        if lifecycle and json.loads(lifecycle[0])["status"] != "active":
+            retention = False
         self.store.insert("outcomes",id=f"syn_outcome_{invoice['id']}",tenant_id=c["tenant"],invoice_id=invoice["id"],
             action_id=s["actions"][0],currency=c["currency"],recovered_at=stamp(paid_at) if paid_at else None,
             gross_recovered=gross,processing_cost=costs,communication_cost=comm,refund_amount=refund,
