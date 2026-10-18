@@ -1,0 +1,30 @@
+{
+  "passed": true,
+  "checks": {
+    "sqlite_integrity": true,
+    "foreign_keys": true,
+    "synthetic_manifest": true,
+    "invoice_count": true,
+    "balances": true,
+    "outcome_accounting": true,
+    "tenant_foreign_keys": true,
+    "currency_consistency": true,
+    "temporal_order": true,
+    "no_double_collection": true,
+    "safe_actions": true,
+    "feature_availability": true,
+    "observe_no_customer_action": true,
+    "delivery_funnel": true,
+    "censored_targets": true,
+    "manifest_counts": true,
+    "export_checksums": true,
+    "training_row_count": true,
+    "replay_no_double_effect": true
+  },
+  "failures": [],
+  "warnings": [
+    "Synthetic evidence only; not provider integration certification.",
+    "One recovery decision per invoice; no full sequential treatment model.",
+    "No real merchant calibration or empirical recovery-rate claim."
+  ]
+}

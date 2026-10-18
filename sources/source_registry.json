@@ -1,0 +1,71 @@
+{
+  "registry_version": "2026-10-18.1",
+  "simulator_version": "0.1.0",
+  "owner": "RecoveryAI maintainers",
+  "entries": [
+    {
+      "id": "stripe_hard_decline_rules",
+      "evidence_class": "VERIFIED_RULE",
+      "source_url": "https://docs.stripe.com/billing/revenue-recovery/smart-retries",
+      "accessed_at": "2026-10-18",
+      "published_at": null,
+      "provider_api_version": null,
+      "population": "Stripe Billing card retry documentation",
+      "denominator": null,
+      "time_window": null,
+      "value_or_rule": "Documented hard declines and missing method, India-issued card or disconnected Connect account prevent automatic retry.",
+      "units": "eligibility",
+      "confidence": "documentation-backed, limited scope",
+      "limitation": "Not all network advice or regulatory rules modeled; no live execution authority."
+    },
+    {
+      "id": "stripe_advice_scope",
+      "evidence_class": "VERIFIED_RULE",
+      "source_url": "https://docs.stripe.com/declines/card",
+      "accessed_at": "2026-10-18",
+      "published_at": null,
+      "population": "Stripe card decline information",
+      "value_or_rule": "Network advice/decline code interpretation depends on the network; advice may be absent.",
+      "limitation": "Simulator blocks automated retry for any supplied advice it cannot interpret."
+    },
+    {
+      "id": "webhook_delivery",
+      "evidence_class": "VERIFIED_RULE",
+      "source_url": "https://docs.stripe.com/webhooks",
+      "accessed_at": "2026-10-18",
+      "published_at": null,
+      "population": "Stripe webhooks",
+      "value_or_rule": "Consumers must handle duplicate events and delivery order not matching creation order.",
+      "limitation": "Delay/duplicate rates are invented. Internal sim.* events are NOT version-pinned Stripe payloads."
+    },
+    {
+      "id": "synthetic_behavior",
+      "evidence_class": "SYNTHETIC_ASSUMPTION",
+      "source_url": null,
+      "population": "this fictional simulator only",
+      "denominator": "defined per formula in docs/assumptions.md",
+      "time_window": "24-month default world; 30-day economic outcome",
+      "parameter_reference": "recoveryai_sim.parameters.Parameters and recoveryai_sim.config.Config",
+      "uncertainty": "not empirically calibrated",
+      "limitation": "All probabilities, effect sizes, monetary costs, country weights and behavioral distributions are hypothetical."
+    },
+    {
+      "id": "scenario_shifts",
+      "evidence_class": "EXPERIMENTAL_HYPOTHESIS",
+      "source_url": null,
+      "parameter_reference": "recoveryai_sim.config.SCENARIOS",
+      "population": "fictional market stress tests",
+      "limitation": "Scenario names do not establish real-world population fidelity."
+    }
+  ],
+  "reviewed_not_used_for_calibration": [
+    "https://docs.stripe.com/testing",
+    "https://docs.stripe.com/billing/testing/test-clocks",
+    "https://docs.adyen.com/development-resources/raw-acquirer-responses/",
+    "https://docs.adyen.com/development-resources/raw-acquirer-responses/visa-integrity-fees/",
+    "https://recurly.com/resources/report/state-of-subscriptions/",
+    "https://baremetrics.com/blog/subscription-payment-recovery-benchmarks",
+    "https://www.pcisecuritystandards.org/"
+  ],
+  "benchmark_decision": "No numeric market benchmark adopted: population, denominator and transferability have not been independently established. No blended recovery rate."
+}

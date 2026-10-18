@@ -1,0 +1,15 @@
+{
+  "invoices": 100000,
+  "merchants": 100,
+  "months": 24,
+  "seed": 42,
+  "scenario": "baseline",
+  "policy": "randomized",
+  "failure_base": 0.1,
+  "refund_probability": 0.025,
+  "delivery_probability": 0.95,
+  "duplicate_probability": 0.1,
+  "max_retries": 1,
+  "start": "2024-01-01T00:00:00+00:00",
+  "schema_version": "1"
+}

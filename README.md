@@ -1,4 +1,35 @@
 # RecoveryAI-Simulation-Engine
+## Runnable implementation: v0.1
+
+The repository now contains an offline vertical slice. The original blueprint
+below is preserved as the roadmap, **not a claim that every planned module is
+complete**. Start with [the implementation guide](docs/implementation.md),
+[data dictionary](docs/data_dictionary.md), [assumptions](docs/assumptions.md) and
+[data card](docs/simulation_data_card.md).
+
+```bash
+python -m venv .venv
+# Activate .venv for your shell, then:
+python -m pip install -e '.[dev,parquet,ml]'
+python -m pytest -q
+python -m recoveryai_sim generate --invoices 10000 --merchants 30 --seed 42 --output outputs/demo --parquet
+python -m recoveryai_sim validate --input outputs/demo
+python -m recoveryai_sim evaluate --input outputs/demo
+python -m recoveryai_sim train --input outputs/demo
+```
+
+Implemented: event queue; persistent customer histories; safe action gate;
+randomized/observe/fixed-retry/rule-based policies; exact minor-unit accounting;
+refunds; censored labels; separate observable/oracle views; Parquet; grouped
+temporal baseline models; currency-separated IPS; tenant/replay validation.
+
+No live calls, production billing integration or empirical calibration. No claim
+to reproduce Stripe Smart Retries. Synthetic outputs cannot establish real lift.
+Full sequential recovery, real cancellation dynamics, Adyen execution rules,
+SMS, DR estimators, real-data adapters and production retraining remain planned.
+
+## Original design blueprint (preserved)
+
 sentetik data
 RecoveryAI Synthetic Payment Intelligence Engine
 Project status: specification and development blueprint. This README defines the intended architecture, contracts, quality gates, and agent workflow. It does not claim that the described modules, CLI commands, datasets, benchmarks, or tests already exist. Implemented capabilities must be tracked explicitly as work progresses.

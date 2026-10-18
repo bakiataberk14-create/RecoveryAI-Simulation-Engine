@@ -1,0 +1,8 @@
+{
+  "invoices": 12,
+  "merchants": 2,
+  "seed": 42,
+  "failure_base": 0.8,
+  "scenario": "baseline",
+  "policy": "randomized"
+}
