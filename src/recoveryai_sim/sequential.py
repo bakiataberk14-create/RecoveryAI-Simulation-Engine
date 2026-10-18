@@ -9,7 +9,8 @@ import json
 
 from .engine import World, stamp
 from .config import SCENARIOS
-from .safety import CATEGORY, Context, HARD, RULE_VERSION, eligible_actions, select_action
+from .safety import CATEGORY, Context, HARD, RULE_VERSION, eligible_actions
+from .sequence_policy import choose, POLICY_VERSION
 from .storage import encode
 
 CONTACT = {"email", "request_update", "request_authentication"}
@@ -75,9 +76,13 @@ class SequentialWorld(World):
                      "payment_succeeded":"invoice.payment_succeeded"}.get(kind)
         self.store.insert("events", id=eid, tenant_id=invoice["tenant"], invoice_id=invoice["id"],
             occurred_at=stamp(time), event_type=f"sim.{kind}", provider_reference_type=reference, payload_json=encode(payload))
-        copies = 2 if self.noise.uniform(eid,"duplicate") < self.config.duplicate_probability else 1
+        # Couple environmental delivery noise across policy worlds using semantic
+        # event identity, not an ordinal changed by intervention-generated events.
+        suffix = payload.get("action_id") if kind.startswith("communication_") else payload.get("attempt_number") if kind=="payment_failed" else stamp(time) if kind.startswith("subscription_") or kind=="consent_changed" else "single"
+        noise_key=(invoice["id"],kind,suffix)
+        copies = 2 if self.noise.uniform(*noise_key,"duplicate") < self.config.duplicate_probability else 1
         for copy in range(copies):
-            delivered = time + timedelta(days=self.noise.uniform(eid,"delay",copy)*self.parameters.webhook_max_delay_days)
+            delivered = time + timedelta(days=self.noise.uniform(*noise_key,"delay",copy)*self.parameters.webhook_max_delay_days)
             if delivered <= self.end:
                 self.store.insert("deliveries", id=f"syn_delivery_{eid}_{copy}", tenant_id=invoice["tenant"],
                                   event_id=eid, delivered_at=stamp(delivered))
@@ -180,10 +185,7 @@ class SequentialWorld(World):
         used = {a["selected"] for a in self.store.db.execute("SELECT selected FROM actions WHERE invoice_id=? AND status='executed'",(invoice["id"],))}
         eligible = tuple(a for a in eligible if a not in CONTACT or a not in used)
         step = len(s["actions"])+1
-        if self.config.policy == "rule_based" and "email" in eligible and s["contacts"] == 0 and "request_update" not in eligible and "request_authentication" not in eligible:
-            chosen, probability = "email", 1.0
-        else:
-            chosen, probability = select_action(self.config.policy,eligible,self.noise.uniform(invoice["id"],step,"policy"))
+        chosen, probability = choose(self.config.policy,eligible,s["contacts"],self.noise.uniform(invoice["id"],step,"policy"))
         history = self.store.db.execute("""SELECT e.event_type,count(DISTINCT i.id) FROM observations o
             JOIN events e ON e.id=o.event_id JOIN invoices i ON i.id=o.invoice_id
             JOIN subscriptions sub ON sub.id=i.subscription_id
@@ -213,7 +215,7 @@ class SequentialWorld(World):
         aid = f"syn_action_{invoice['id']}_{step:02d}"
         self.store.insert("actions",id=aid,tenant_id=c["tenant"],invoice_id=invoice["id"],customer_id=c["id"],
             decision_at=stamp(time),features_json=encode(features),eligible_json=encode(eligible),selected=chosen,
-            propensity=probability,policy=self.config.policy,policy_version="sequential-1",rule_version=RULE_VERSION,
+            propensity=probability,policy=self.config.policy,policy_version=POLICY_VERSION,rule_version=RULE_VERSION,
             status="scheduled",step=step,previous_action_id=s["actions"][-1] if s["actions"] else None,
             source_observation_id=s["source"],sources_json=encode(sources))
         s["actions"].append(aid)
@@ -321,7 +323,7 @@ class SequentialWorld(World):
         s["tick"] += 1
         chosen = active["selected"] if active else "observe"
         delivered = active["delivered"] if active else False
-        draw = self.noise.uniform(invoice["id"],s["tick"],"window_payment")
+        draw = self.noise.uniform(invoice["id"],stamp(time),"window_payment")
         days = (time-s["last_tick"]).total_seconds()/86400
         s["last_tick"] = time
         probability = self.window_probability(invoice,chosen,delivered,days)

@@ -1,5 +1,5 @@
 """Evidence-based validation of the schema-2 execution and observation boundaries."""
-from datetime import datetime
+from datetime import datetime,timedelta
 import hashlib
 import json
 import sqlite3
@@ -80,6 +80,22 @@ def validate_v2(root,manifest):
         records=list(load_training(root))
         check("training_rows",int(len(records)!=count("SELECT count(*) FROM actions a JOIN outcomes o ON o.invoice_id=a.invoice_id")))
         check("no_duplicated_step_reward",sum(r["reward_30d_minor"] is not None for r in records))
+        if manifest.get("causal_episode_contract"):
+            causal_path=root/"evaluation/causal_episodes.jsonl"
+            causal_rows=[json.loads(line) for line in causal_path.read_text(encoding="utf-8").splitlines()] if causal_path.is_file() else []
+            bad=0
+            for row in causal_rows:
+                source=db.execute("SELECT i.tenant_id,i.currency,a.occurred_at FROM invoices i JOIN attempts a ON a.invoice_id=i.id AND a.number=1 AND a.result='failed' WHERE i.id=?",(row["invoice_id"],)).fetchone()
+                bad+=int(source is None or source["tenant_id"]!=row["tenant_id"] or source["currency"]!=row["currency"] or source["occurred_at"]!=row["failure_at"])
+                bad+=row["contract"]!=manifest["causal_episode_contract"] or row["synthetic"] is not True or row["billable"] is not False
+                bad+=datetime.fromisoformat(row["financial_deadline"])-datetime.fromisoformat(row["failure_at"])!=timedelta(days=30)
+                if row["status"]=="mature":
+                    bad+=row["mature_after"]>row["observed_until"]
+                    bad+=row["reward_minor"]!=row["gross_recovered_minor"]-row["refund_minor"]-row["processing_cost_minor"]-row["communication_cost_minor"]
+                else:
+                    bad+=row["reward_minor"] is not None
+            check("fixed_causal_cohort",bad+int(len(causal_rows)!=count("SELECT count(*) FROM attempts WHERE number=1 AND result='failed'")))
+            check("unique_causal_episode",len(causal_rows)-len({(r["tenant_id"],r["invoice_id"]) for r in causal_rows}))
         check("censored_training_labels",sum(value is not None and (datetime.fromisoformat(r["metadata"]["observed_until"])-datetime.fromisoformat(r["metadata"]["decision_at"])).total_seconds()<int(name.split('_')[1][:-1])*86400 for r in records for name,value in r["y"].items() if name.startswith("recovered_")))
         checksum_errors=0
         for relative,expected in manifest.get("logical_checksums",{}).items():

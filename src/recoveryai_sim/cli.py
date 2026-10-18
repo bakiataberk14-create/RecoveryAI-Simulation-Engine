@@ -19,11 +19,18 @@ def main(argv=None):
     gen.add_argument("--policy", choices=POLICIES)
     gen.add_argument("--output", type=Path, required=True)
     gen.add_argument("--parquet", action="store_true")
-    for command in ("validate", "evaluate", "train", "oracle-evaluate"):
+    for command in ("validate", "evaluate", "train", "oracle-evaluate", "trajectory-evaluate"):
         sub = commands.add_parser(command)
         sub.add_argument("--input", type=Path, required=True)
-        if command == "evaluate":
+        if command in {"evaluate","trajectory-evaluate"}:
             sub.add_argument("--target-policy", choices=[p for p in POLICIES if p != "randomized"], default="rule_based")
+    compare=commands.add_parser("compare-policies")
+    compare.add_argument("--config",type=Path,required=True)
+    compare.add_argument("--output",type=Path,required=True)
+    compare.add_argument("--invoices",type=int)
+    compare.add_argument("--merchants",type=int)
+    compare.add_argument("--seeds",type=int,nargs="+",default=[42,43])
+    compare.add_argument("--scenarios",choices=SCENARIOS,nargs="+")
     calibrate = commands.add_parser("assess-calibration")
     calibrate.add_argument("--input", type=Path, required=True)
     args = parser.parse_args(argv)
@@ -45,10 +52,19 @@ def main(argv=None):
     elif args.command == "oracle-evaluate":
         from .evaluation import evaluate_oracle
         result = evaluate_oracle(args.input)
+    elif args.command == "trajectory-evaluate":
+        from .trajectory_evaluation import evaluate_trajectories
+        result=evaluate_trajectories(args.input,args.target_policy)
+    elif args.command == "compare-policies":
+        from dataclasses import replace
+        from .policy_comparison import compare_policies
+        cfg=Config.load(args.config)
+        overrides={k:getattr(args,k) for k in ("invoices","merchants") if getattr(args,k) is not None}
+        result=compare_policies(replace(cfg,**overrides),args.output,seeds=args.seeds,scenarios=args.scenarios)
     else:
         from .calibration import assess_aggregate
         result = assess_aggregate(json.loads(args.input.read_text(encoding="utf-8")))
-    if args.command in ("validate", "evaluate", "train", "oracle-evaluate"):
+    if args.command in ("validate", "evaluate", "train", "oracle-evaluate", "trajectory-evaluate"):
         (args.input / f"{args.command}_report.json").write_text(json.dumps(result, indent=2, allow_nan=False), encoding="utf-8")
     print(json.dumps(result, indent=2, allow_nan=False))
     return 1 if result.get("passed") is False or result.get("status") == "blocked" else 0

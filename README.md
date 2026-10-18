@@ -1,4 +1,19 @@
 # RecoveryAI-Simulation-Engine
+## Full policy comparisons: v0.3
+
+Compare complete multi-step policies on matched worlds and fixed initial-failure
+cohorts. [Evaluation contracts and assumptions](docs/policy_evaluation_v3.md)
+explain financial windows, cluster intervals and logged trajectory support.
+
+```bash
+python -m recoveryai_sim compare-policies --config configs/sequential.json --invoices 2000 --merchants 20 --seeds 42 43 --scenarios baseline saturation --output outputs/comparison
+python -m recoveryai_sim trajectory-evaluate --input outputs/randomized --target-policy rule_based
+```
+
+The second command needs a schema2 dataset generated with `policy: randomized`.
+Sparse trajectory support yields a blocked result, not an unsupported estimate.
+All values remain synthetic and currency-separated.
+
 ## Sequential engine: v0.2
 
 Schema2 adds delayed observations, database-enforced state transitions and bounded

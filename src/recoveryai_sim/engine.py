@@ -21,6 +21,17 @@ CURRENCIES = {"US": "USD", "GB": "GBP", "DE": "EUR", "FR": "EUR", "CA": "CAD", "
 INDUSTRIES = ("b2b_saas", "consumer_saas", "ai_subscription", "developer_tools", "education", "digital_service")
 
 
+def source_digest():
+    digest=hashlib.sha256()
+    for path in sorted(Path(__file__).parent.glob("*.py")):
+        digest.update(path.name.encode())
+        digest.update(path.read_bytes().replace(b"\r\n",b"\n"))
+    return digest.hexdigest()
+
+
+IMPORTED_SOURCE_DIGEST=source_digest()
+
+
 def add_months(date, months):
     year, month = divmod(date.year * 12 + date.month - 1 + months, 12)
     return date.replace(year=year, month=month + 1, day=min(date.day, calendar.monthrange(year, month + 1)[1]))
@@ -31,6 +42,8 @@ def stamp(date):
 
 
 def generate(config: Config, output: Path, parquet=False):
+    if source_digest()!=IMPORTED_SOURCE_DIGEST:
+        raise RuntimeError("Source changed since process import; restart the simulation")
     if parquet:
         import pyarrow  # fail before creating output if optional dependency is absent
     output = Path(output)
@@ -48,6 +61,8 @@ def generate(config: Config, output: Path, parquet=False):
         if config.schema_version == "2":
             from .sequential_views import export_training_v2
             export_training_v2(store.db, output)
+            from .trajectory import export_causal_episodes
+            export_causal_episodes(store.db,output,config)
         else:
             from .views import export_training
             export_training(store.db, output)
@@ -55,15 +70,15 @@ def generate(config: Config, output: Path, parquet=False):
         for path in sorted(output.rglob("*.jsonl")):
             with path.open("rb") as content:
                 checksums[path.relative_to(output).as_posix()] = hashlib.file_digest(content, "sha256").hexdigest()
-        source_hash = hashlib.sha256()
-        for path in sorted(Path(__file__).parent.glob("*.py")):
-            source_hash.update(path.name.encode())
-            source_hash.update(path.read_bytes().replace(b"\r\n", b"\n"))
+        if source_digest()!=IMPORTED_SOURCE_DIGEST:
+            raise RuntimeError("Source changed during simulation; no complete manifest published")
         manifest = {"label": "SYNTHETIC / NOT REAL TRANSACTIONS", "billable": False,
                     "engine_version": __version__, "config": asdict(config), "config_sha256": config.digest,
                     "rule_version": RULE_VERSION, "counts": counts, "status": "complete",
-                    "source_sha256": source_hash.hexdigest(), "logical_checksums": checksums,
-                    "source_registry_version": "2026-10-18.2",
+                    "source_sha256": IMPORTED_SOURCE_DIGEST, "logical_checksums": checksums,
+                    "source_registry_version": "2026-10-18.3",
+                    "initial_world_sha256": world.initial_world_sha256,
+                    "causal_episode_contract": "failure-anchored-30d-v1" if config.schema_version=="2" else None,
                     "oracle_warning": "oracle/ and simulation.sqlite contain hidden truth; NEVER train directly from them"}
         (output / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
     finally:
@@ -154,6 +169,14 @@ class World:
 
     def run(self):
         self.seed_world()
+        initial_hash=hashlib.sha256()
+        for table in ("merchants","customers","subscriptions","payment_methods","oracle_world"):
+            initial_hash.update(table.encode())
+            for row in self.store.db.execute(f"SELECT * FROM {table} ORDER BY id"):
+                initial_hash.update((encode(dict(row))+"\n").encode())
+        for _,_,_,(customer,_) in sorted(self.queue):
+            initial_hash.update(encode({"customer":customer["id"],"renewals":[stamp(date) for date in customer["dates"]]}).encode())
+        self.initial_world_sha256=initial_hash.hexdigest()
         while self.queue:
             time, _, kind, payload = heapq.heappop(self.queue)
             getattr(self, f"on_{kind}")(time, payload)

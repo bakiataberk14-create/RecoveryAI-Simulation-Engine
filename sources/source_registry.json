@@ -1,6 +1,6 @@
 {
-  "registry_version": "2026-10-18.2",
-  "simulator_version": "0.2.0",
+  "registry_version": "2026-10-18.3",
+  "simulator_version": "0.3.0",
   "owner": "RecoveryAI maintainers",
   "entries": [
     {
@@ -57,6 +57,24 @@
       "parameter_reference": "docs/sequential_v2.md and configs/sequential.json",
       "value_or_rule": "Conditional window probability 1-(1-q)^(days/30), bounded steps/retries and one episode reward.",
       "limitation": "Uncalibrated local transition model; next-window oracle is not full-policy counterfactual value."
+    },
+    {
+      "id": "sequential_importance_sampling",
+      "evidence_class": "VERIFIED_RULE",
+      "source_url": "https://proceedings.mlr.press/v48/jiang16.html",
+      "accessed_at": "2026-10-18",
+      "published_at": "2016-06-20",
+      "population": "sequential policy evaluation mathematical framework, not merchant measurements",
+      "value_or_rule": "Trajectory importance ratios multiply conditional target/behavior action probabilities. Unbiasedness depends on support and the data-generating assumptions; variance can be large.",
+      "limitation": "This release implements unclipped trajectory IS, not the paper's doubly robust estimator. Customer-level histories and fixed enrollment are simulator-specific assumptions."
+    },
+    {
+      "id": "paired_policy_rollouts",
+      "evidence_class": "EXPERIMENTAL_HYPOTHESIS",
+      "source_url": null,
+      "population": "fixed synthetic worlds and initial-failure cohorts",
+      "value_or_rule": "Complete policy reruns share seeded world state and semantic event/window noise. Financial reward uses30 days from initial failure, including decisionless natural recovery.",
+      "limitation": "Merchant bootstrap intervals are conditional on the chosen worlds. No real bank/customer causal effect is inferred."
     },
     {
       "id": "scenario_shifts",

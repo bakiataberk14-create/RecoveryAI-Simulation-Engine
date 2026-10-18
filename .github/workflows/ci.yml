@@ -27,6 +27,7 @@ jobs:
       - run: python -m recoveryai_sim generate --config configs/sequential.json --output outputs/sequential --parquet
       - run: python -m recoveryai_sim validate --input outputs/sequential
       - run: python -m recoveryai_sim train --input outputs/sequential
+      - run: python -m recoveryai_sim compare-policies --config configs/sequential.json --invoices 1000 --merchants 10 --seeds 42 --output outputs/policy-comparison
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -37,3 +38,4 @@ jobs:
             outputs/ci/manifest.json
             outputs/sequential/*report.json
             outputs/sequential/manifest.json
+            outputs/policy-comparison/policy_comparison_report.json
